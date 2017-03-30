@@ -1,10 +1,12 @@
-package com.orange.customview.widget;
+package com.orange.customview.weather;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -12,32 +14,31 @@ import android.view.View;
 
 import com.orange.customview.R;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by Orange on 2017/3/28.
  */
 
+
+/**
+ * 实现温度的圆滑曲线图白天为黄色曲线，晚上为蓝色曲线
+ */
 public class TemperatureChartView extends View {
     //集合数目
     private static final int NUM = 6;
-    //光滑变量
-    private static final float smoothness = 0.5f;
-
 
     //白天温度集合
     private int tempDay[] = new int[6];
-    //白天贝塞尔曲线控制点
+    //夜间温度集合
+    private int tempNight[] = new int[6];
+    //天气图标集合
+    private int weatherImage[] = new int[6];
 
-    List<PointF> basselPoints = new ArrayList<>();
-    private float controlDayX[] = new float[12];
-    private float controlDayY[] = new float[12];
 
     //白天y轴集合
     private float YDay[] = new float[6];
     //夜间y轴集合
     private float YNight[] = new float[6];
+
     //x轴集合
     private float X[] = new float[6];
 
@@ -54,9 +55,6 @@ public class TemperatureChartView extends View {
     //画文字的画笔
     private Paint textPaint;
 
-    //原点坐标
-
-    private int zeroX, zeroY;
     //屏幕密度
     private float density;
     //圆点直径
@@ -70,6 +68,8 @@ public class TemperatureChartView extends View {
     private float space;
     //文字距离点的距离
     private float textSpace;
+    //y轴方向曲线距离控件的距离
+    private float timeSpace;
 
 
     public TemperatureChartView(Context context) {
@@ -96,6 +96,7 @@ public class TemperatureChartView extends View {
         radiusToday = 5 * density;
         space = 3 * density;
         textSpace = 10 * density;
+        timeSpace = 60 * density;
         float strokeWidth = 2 * density;
 
         //初始化白天画笔
@@ -112,7 +113,6 @@ public class TemperatureChartView extends View {
         paintNight.setAntiAlias(true);
         //初始化点画笔
         pointPaint = new Paint();
-        pointPaint.setColor(getResources().getColor(R.color.YELLOW_COMMON));
         pointPaint.setAntiAlias(true);
         //初始化字体画笔
         textPaint = new Paint();
@@ -135,12 +135,49 @@ public class TemperatureChartView extends View {
         }
 
         setYValue();
-        drawDayChart(canvas, tempDay, YDay, 0);
+        drawChart(canvas, tempDay, YDay, 0);
+        drawChart(canvas, tempNight, YNight, 1);
+
+    }
+
+
+    private void drawChart(Canvas canvas, int temp[], float y[], int type) {
+
+        int alpha1 = 102;
+        int alpha2 = 255;
+        for (int i = 0; i < NUM; i++) {
+            //画线
+            if (i < NUM - 1) {
+                drawScrollLine(canvas, i, y, type);
+            }
+
+            if (type == 0) {
+                pointPaint.setColor(getResources().getColor(R.color.YELLOW_COMMON));
+            } else {
+                pointPaint.setColor(getResources().getColor(R.color.BLUE_COMMON));
+            }
+            //画点
+            if (i == 1) {
+                pointPaint.setAlpha(alpha2);
+                canvas.drawCircle(X[i], y[i], radiusToday, pointPaint);
+            } else {
+                pointPaint.setAlpha(alpha1);
+                canvas.drawCircle(X[i], y[i], radius, pointPaint);
+            }
+
+            //画字
+            textPaint.setAlpha(alpha2);
+            drawText(canvas, textPaint, i, temp, y, type);
+
+            //绘制天气图标
+            drawPicture(canvas, weatherImage);
+        }
 
     }
 
     //设置x轴集合
     private void setXValues() {
+        //获取控件高度
         height = getHeight();
         float width = getWidth();
         float w = width / 12;
@@ -148,6 +185,7 @@ public class TemperatureChartView extends View {
             X[i] = (2 * i + 1) * w;
         }
     }
+
 
     //设置y轴集合
     private void setYValue() {
@@ -162,32 +200,88 @@ public class TemperatureChartView extends View {
                 maxDay = i;
             }
         }
+
+        //获取夜间最高气温和最低气温
+        int minNight = tempNight[0];
+        int maxNight = tempNight[0];
+        for (int i : tempNight) {
+            if (i < minNight) {
+                minNight = i;
+            }
+            if (i > maxNight) {
+                maxNight = i;
+            }
+        }
+
+
+        int minTemp = minNight < minDay ? minNight : minDay;
+        int maxTemp = maxNight > maxDay ? maxNight : maxDay;
+
+
         //将y轴划分为p份数
-        float p = maxDay - minDay;
+        float p = maxTemp - minTemp;
         //y轴一端到控件一端的距离
-        float s = space + textSpace + textSize + radius;
+        float s = space + textSpace + textSize + radius + timeSpace;
         //y轴高度
         float y = height - 2 * s;
 
+        //温度相同的时候
         if (p == 0) {
             for (int i = 0; i < NUM; i++) {
                 YDay[i] = y / 2 + s;
+                YNight[i] = y / 2 + s;
             }
         } else {
             float value = y / p;
             for (int i = 0; i < NUM; i++) {
-                YDay[i] = height - value * (tempDay[i] - minDay) - s;
+                YDay[i] = height - value * (tempDay[i] - minTemp) - s;
+                YNight[i] = height - value * (tempNight[i] - minTemp) - s;
             }
         }
 
 
     }
 
-    private void drawScrollLine(Canvas canvas, int i,float y[] ){
-        PointF start = new PointF(X[i],y[i]);
-        PointF end = new PointF(X[i+1],y[i+1]);
+    /**
+     * 绘制天气图标
+     *
+     * @param canvas
+     * @param pic
+     */
+    private void drawPicture(Canvas canvas, int pic[]) {
 
-        float wt = (start.x+end.x)/2;
+        //获取两个点的水平间距
+        int w = (int) (X[1] - X[0]);
+        float rate = 0.6f;
+
+        for (int i = 0; i < pic.length; i++) {
+            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), pic[i]);
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            //按比率压缩图片
+            float scaleWidth = (w * rate) / width;
+            float scaleHeight = (w * rate) / height;
+            Matrix matrix = new Matrix();
+            matrix.postScale(scaleWidth, scaleHeight);
+            Bitmap bm = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+
+            canvas.drawBitmap(bm, X[i] - 0.3f * w, 2 * textSpace, new Paint());
+        }
+    }
+
+
+    /**
+     * 绘制曲线
+     *
+     * @param canvas 画布
+     * @param i      索引
+     * @param y      y轴集合
+     */
+    private void drawScrollLine(Canvas canvas, int i, float y[], int type) {
+        PointF start = new PointF(X[i], y[i]);
+        PointF end = new PointF(X[i + 1], y[i + 1]);
+
+        float wt = (start.x + end.x) / 2;
         PointF p3 = new PointF();
         PointF p4 = new PointF();
         p3.y = start.y;
@@ -197,43 +291,16 @@ public class TemperatureChartView extends View {
 
         Path path = new Path();
         path.moveTo(start.x, start.y);
+        //三阶贝塞尔曲线
         path.cubicTo(p3.x, p3.y, p4.x, p4.y, end.x, end.y);
-        canvas.drawPath(path, paintDay);
-
-    }
-
-
-    private void drawDayChart(Canvas canvas, int temp[], float y[], int type) {
-
-        int alpha1 = 102;
-        int alpha2 = 255;
-        for (int i = 0; i < NUM; i++) {
-            //画线
-            if (i < NUM-1) {
-                Path path = new Path();
-//                path.moveTo(X[i],y[i]);
-//                path.lineTo(X[i+1]-density,y[i+1]);
-//                path.quadTo(X[i]-density*10,y[i]-density*10,X[i+1],y[i+1]);
-//                canvas.drawLine(X[i],y[i],X[i+1],y[i+1],paintDay);
-                drawScrollLine(canvas, i, y);
-            }
-
-            //画点
-            if (i == 1) {
-                pointPaint.setAlpha(alpha2);
-                canvas.drawCircle(X[i], y[i], radiusToday, pointPaint);
-            } else {
-                pointPaint.setAlpha(alpha1);
-                canvas.drawCircle(X[i], y[i], radius, pointPaint);
-            }
-
-            //画字
-            textPaint.setAlpha(alpha2);
-            drawText(canvas, textPaint, i, temp, y, type);
-
+        if (type == 0) {
+            canvas.drawPath(path, paintDay);
+        } else {
+            canvas.drawPath(path, paintNight);
         }
 
     }
+
 
     /**
      * 绘制文字
@@ -256,10 +323,30 @@ public class TemperatureChartView extends View {
                 canvas.drawText(temp[i] + "°", X[i], y[i] + textSpace + textSize, textPaint);
                 break;
         }
+
+        for (int j = 0; j < NUM; j++) {
+            if (j == 0) {
+                canvas.drawText("昨日", X[j], height - 2 * textSpace, textPaint);
+            } else {
+                canvas.drawText(6 + 3 * (j - 1) + ":00", X[j], height - 2 * textSpace, textPaint);
+            }
+
+        }
     }
 
 
     public void setTempDay(int[] tempDay) {
         this.tempDay = tempDay;
+        invalidate();
+    }
+
+    public void setTempNight(int[] tempNight) {
+        this.tempNight = tempNight;
+        invalidate();
+    }
+
+    public void setWeatherImage(int[] weatherImage) {
+        this.weatherImage = weatherImage;
+        invalidate();
     }
 }

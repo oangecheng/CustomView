@@ -4,13 +4,32 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.orange.customview.MainActivity"
-    android:background="@color/BLUE_COMMON">
+    android:orientation="vertical"
+    tools:context="com.orange.customview.MainActivity">
 
-    <com.orange.customview.widget.TemperatureChartView
+    <com.orange.customview.weather.TemperatureChartView
         android:id="@+id/temp"
-        android:layout_width="300dp"
-        android:layout_height="200dp"/>
+        android:background="@color/BLACK_COMMON"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"/>
+
+    <RelativeLayout
+        android:layout_width="200dp"
+        android:layout_height="40dp">
+        <com.orange.customview.loading.LeafLoadingView
+            android:id="@+id/loading"
+            android:layout_width="200dp"
+            android:layout_height="40dp"/>
+
+        <ImageView
+            android:id="@+id/fengche"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="4dp"
+            android:src="@mipmap/fengshan"/>
+    </RelativeLayout>
 
 
 

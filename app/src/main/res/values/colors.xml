@@ -4,7 +4,10 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
     <color name="WHITE_COMMON">#FFFFFF</color>
+    <color name="BLACK_COMMON">#000000</color>
     <color name="YELLOW_COMMON">#FFFF00</color>
     <color name="BLUE_COMMON">#388ecb</color>
     <color name="SILVER">#C0C0C0</color>
+    <color name="ORANGE">#FFF9A703</color>
+
 </resources>
