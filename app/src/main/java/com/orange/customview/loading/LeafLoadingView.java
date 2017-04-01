@@ -41,9 +41,9 @@ public class LeafLoadingView extends View {
     private static final long LEAF_ROTATE_TIME = 2000;
 
     // 用于控制绘制的进度条距离左／上／下的距离
-    private static final int LEFT_MARGIN = 9;
+    private static final int LEFT_MARGIN = 8;
     // 用于控制绘制的进度条距离右的距离
-    private static final int RIGHT_MARGIN = 25;
+    private static final int RIGHT_MARGIN = 16;
     private int mLeftMargin, mRightMargin;
     // 中等振幅大小
     private int mMiddleAmplitude = MIDDLE_AMPLITUDE;
