@@ -1,95 +1,79 @@
-package com.orange.customview;
+package com.orange.customview.activity;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.view.animation.LinearInterpolator;
-import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.orange.customview.loading.LeafLoadingView;
+import com.orange.customview.R;
 import com.orange.customview.reader.BookPageFactory;
 import com.orange.customview.reader.TxtReaderView;
-import com.orange.customview.weather.TemperatureChartView;
 
 import java.io.IOException;
-import java.util.Random;
 
-public class MainActivity extends AppCompatActivity {
-
-
-    private static final int REFRESH_PROGRESS = 0x10;
-    private int mProgress = 0;
-    private LeafLoadingView mLeafLoadingView;
-    private ImageView iv;
+public class ReaderActivity extends AppCompatActivity {
 
     private TxtReaderView mPageWidget;
     Bitmap mCurPageBitmap, mNextPageBitmap;
     Canvas mCurPageCanvas, mNextPageCanvas;
     BookPageFactory pagefactory;
 
-
-    Handler mHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case REFRESH_PROGRESS:
-                    if (mProgress < 40) {
-                        mProgress += 2;
-                        // 随机800ms以内刷新一次
-                        mHandler.sendEmptyMessageDelayed(REFRESH_PROGRESS,
-                                new Random().nextInt(800));
-                        mLeafLoadingView.setProgress(mProgress);
-                    } else if (mProgress<100){
-                        mProgress += 2;
-                        // 随机1200ms以内刷新一次
-                        mHandler.sendEmptyMessageDelayed(REFRESH_PROGRESS,
-                                new Random().nextInt(1200));
-                        mLeafLoadingView.setProgress(mProgress);
-
-                    }else {
-                        mProgress = 0;
-                        mLeafLoadingView.setProgress(mProgress);
-                        mHandler.sendEmptyMessage(REFRESH_PROGRESS);
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-        };
-    };
+    private  int w;
+    private  int h;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_reader);
 
+        txtReader();
+    }
 
+    /**
+     * 翻页
+     */
+    private void txtReader(){
 
         mPageWidget = (TxtReaderView)findViewById(R.id.txt_reader);
+        w = View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED);
+        h = View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED);
+        WindowManager wm = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
+        mPageWidget.measure(w,h);
 
+        w = 300;
+        h = 400;
 
-        mCurPageBitmap = Bitmap.createBitmap(dipToPx(MainActivity.this, 150), dipToPx(MainActivity.this, 200), Bitmap.Config.ARGB_8888);
-        mNextPageBitmap = Bitmap.createBitmap(dipToPx(MainActivity.this, 150), dipToPx(MainActivity.this, 200), Bitmap.Config.ARGB_8888);
+        int w1 =dipToPx(ReaderActivity.this, w);
+        int h1 = dipToPx(ReaderActivity.this, h);
+
+        mCurPageBitmap = Bitmap.createBitmap(dipToPx(ReaderActivity.this, w), dipToPx(ReaderActivity.this, h), Bitmap.Config.ARGB_8888);
+        mNextPageBitmap = Bitmap.createBitmap(dipToPx(ReaderActivity.this, w), dipToPx(ReaderActivity.this, h), Bitmap.Config.ARGB_8888);
 
         mCurPageCanvas = new Canvas(mCurPageBitmap);
         mNextPageCanvas = new Canvas(mNextPageBitmap);
-        pagefactory = new BookPageFactory(dipToPx(MainActivity.this, 150), dipToPx(MainActivity.this, 200));
+        pagefactory = new BookPageFactory(dipToPx(ReaderActivity.this, w), dipToPx(ReaderActivity.this, h));
 
-        pagefactory.setBgBitmap(BitmapFactory.decodeResource(this.getResources(), R.mipmap.bg));//设置背景图片
+        Bitmap bitmap = BitmapFactory.decodeResource(this.getResources(), R.mipmap.bg);
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        //按比率压缩图片
+        float scaleWidth = ((float) w1) / width;
+        float scaleHeight =((float) h1) / height;
+        Matrix matrix = new Matrix();
+        matrix.postScale(scaleWidth, scaleHeight);
+        Bitmap bm = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+
+
+        pagefactory.setBgBitmap(bm);//设置背景图片
 
         try {
             pagefactory.openbook(Environment.getExternalStorageDirectory().getAbsolutePath()+"/1000.txt");//打开文件
@@ -102,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
+        mPageWidget.invalidate();
 
         mPageWidget.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -150,42 +135,6 @@ public class MainActivity extends AppCompatActivity {
 
         });
     }
-
-
-
-
-//        /**
-//         * 加载动画测试
-//         */
-//        mLeafLoadingView = (LeafLoadingView) findViewById(R.id.loading);
-//        iv = (ImageView)findViewById(R.id.fengche);
-//        Animation animation = AnimationUtils.loadAnimation(this, R.anim.fengche);
-//        animation.setFillAfter(true);
-//        LinearInterpolator lin = new LinearInterpolator();
-//        animation.setInterpolator(lin);
-//        iv.startAnimation(animation);
-//        mHandler.sendEmptyMessageDelayed(REFRESH_PROGRESS, 3000);
-//
-//
-//        /**
-//         * 天气预报界面测试
-//         */
-//        TemperatureChartView temp = (TemperatureChartView)findViewById(R.id.temp);
-//        int t1[] = new int[]{
-//          12, 15, 14, 16, 13, 14
-//        };
-//        int t2[] = new int[]{
-//                10, 13, 12, 14, 11, 13
-//        };
-//        int imageId[] = new int[]{
-//                R.mipmap.logo1038_03,R.mipmap.logo1038_06,R.mipmap.logo1038_14,
-//                R.mipmap.logo1038_19,R.mipmap.logo1038_25,R.mipmap.logo1038_09
-//        };
-//
-//        temp.setTempDay(t1);
-//        temp.setTempNight(t2);
-//        temp.setWeatherImage(imageId);
-//    }
 
 
     private int dipToPx(Context context, int dip) {

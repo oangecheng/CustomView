@@ -288,6 +288,7 @@ public class BookPageFactory {
             if (m_book_bg == null)
                 c.drawColor(m_backColor);
             else
+
                 c.drawBitmap(m_book_bg, 0, 0, null);
             int y = marginHeight;
             for (String strLine : m_lines) {
